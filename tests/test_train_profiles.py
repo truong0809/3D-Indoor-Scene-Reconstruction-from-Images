@@ -79,9 +79,13 @@ def test_mcmc_needs_baseline_budget(config):
     with pytest.raises(ValueError, match="different protocol"):  # vd. lượt chạy thử 3000 vòng
         resolve_cap_max(spec, baseline_summary=baseline_summary(config, protocol={**config["protocol"],
                                                                                   "max_steps": 3000}))
-    with pytest.raises(ValueError, match="deviates"):
-        resolve_cap_max(spec, baseline_summary=baseline_summary(
-            config, deviations={"max_steps": {"base": 30000, "used": 30000, "source": "cli"}}))
+    # lượt chạy thử: baseline và mcmc cùng đổi max_steps -> cùng protocol nên dùng được
+    quick = resolve_mode(config, "mcmc", protocol_overrides={"max_steps": 3000})
+    quick_base = baseline_summary(config, count=150_000, protocol=dict(quick.protocol),
+                                  deviations={"max_steps": {"base": 30000, "used": 3000, "source": "cli"}})
+    assert resolve_cap_max(quick, baseline_summary=quick_base, seed=42)[0] == 150_000
+    with pytest.raises(ValueError, match="different protocol"):  # nhưng lượt chuẩn thì không
+        resolve_cap_max(spec, baseline_summary=quick_base, seed=42)
     with pytest.raises(ValueError, match="seed 43"):
         resolve_cap_max(spec, baseline_summary=baseline_summary(config, seed=43), seed=42)
     cap, source = resolve_cap_max(spec, cli_value=1_000_000)

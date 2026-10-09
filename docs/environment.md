@@ -143,6 +143,44 @@ Thiết kế và giao thức so sánh: `docs/design/training_modes.md`. Env tác
 bash scripts/setup_gsplat.sh         # 9 bước như setup_3dgs_inria.sh; smoke test: scripts/smoke_test_gsplat.py
 ```
 
+### 4.4 Lượt chạy thử đầu tiên trên Runpod
+
+Mục đích: kiểm tra toàn bộ script trên GPU thật trước khi chạy thực nghiệm dài. Thời gian ghi dưới đây là ước lượng, chưa đo.
+
+**Tạo pod**
+
+- Secure Cloud, gắn network volume ≥ 100 GB cùng data center (mount tại `/workspace`).
+- GPU: RTX A6000 48 GB (thay thế: A40, RTX 4090).
+- Template PyTorch bản **devel** (có `nvcc`), Ubuntu 22.04.
+
+**Các bước** (trong terminal của pod)
+
+1. Clone repo bằng deploy key (mục 2), rồi `cd /workspace/repo && bash scripts/env_probe.sh` (vài phút). Xem phần SUMMARY:
+   - mục GPU/VRAM, `nvcc` và các host đều PASS;
+   - dòng "CUDA Version" của driver ≥ 12.8.
+
+   Nếu driver chỉ hỗ trợ 12.6, thêm `TORCH_CUDA_OVERRIDE=cu126` vào hai lệnh cài ở bước 2.
+2. Cài môi trường, mỗi script kết thúc bằng smoke test PASSED. Phiên bản trong file conf còn "provisional", nên lượt đầu cần `ALLOW_PROVISIONAL=1`:
+
+   ```bash
+   ALLOW_PROVISIONAL=1 bash scripts/setup_3dgs_inria.sh   # ~15–30 phút
+   ALLOW_PROVISIONAL=1 bash scripts/setup_gsplat.sh       # ~20–40 phút (build gsplat)
+   bash scripts/setup_data_tools.sh                       # ~5–10 phút
+   ```
+3. `QUICK=1 bash scripts/run_modes_deepblending.sh`: chạy thử trọn luồng tải dữ liệu → huấn luyện 3.000 vòng → đánh giá → bảng, cho cả `default` và `mcmc` trên 2 cảnh (~15–30 phút). Kết quả nằm ở `outputs/modes_db_quick/` và chỉ để kiểm tra chạy được, không phải số liệu.
+4. Nếu bước 3 ổn, chạy lượt đầy đủ (~3–5 giờ):
+
+   ```bash
+   bash scripts/run_baseline_deepblending.sh   # B0: Inria trên Deep Blending
+   bash scripts/run_modes_deepblending.sh      # B1 default và mcmc, đối chiếu với B0
+   ```
+5. Stop pod. Mọi thứ trong `/workspace` vẫn còn.
+
+**Gửi lại:**
+
+- toàn bộ file trong `/workspace/reports/`: `env_*.txt`, `setup_*.txt`, `pip_freeze_*`, `conda_env_*`, `baseline_db_summary_*.json`, `modes_db*_*.md` / `.json`;
+- nếu có bước lỗi: file log tương ứng trong `/workspace/logs/`.
+
 ## 5. Mốc đối chiếu cho Bước 4
 
 Bước 4 tái lập kết quả trên **Deep Blending**: 2 cảnh trong nhà (playroom, drjohnson), Inria cung cấp sẵn dữ liệu COLMAP trong `tandt_db.zip`.

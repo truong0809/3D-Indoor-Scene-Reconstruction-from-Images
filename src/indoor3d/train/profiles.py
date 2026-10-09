@@ -222,7 +222,8 @@ def resolve_cap_max(spec: ModeSpec, cli_value: int | None = None, baseline_summa
     """Giá trị --strategy.cap-max và nguồn gốc của nó (ghi vào run_meta).
 
     Với chính sách match_baseline, lượt baseline phải đã xong (status OK), đúng chế độ baseline,
-    cùng protocol với lượt đang chạy, không có sai khác protocol của riêng nó và cùng seed.
+    cùng protocol với lượt đang chạy và cùng seed. Cùng protocol nghĩa là lượt chạy thử (vd. cả hai
+    cùng max_steps=3000) dùng được baseline chạy thử, nhưng lượt chuẩn không dùng được baseline chạy thử.
     (Kiểm tra cùng tập test nằm ở run.py vì cần split của lượt đang chạy.)
     """
     if cli_value is not None:
@@ -247,8 +248,6 @@ def resolve_cap_max(spec: ModeSpec, cli_value: int | None = None, baseline_summa
                          f"expected '{spec.baseline_mode}'")
     if baseline_summary.get("protocol") != spec.protocol:
         raise ValueError("the baseline run used a different protocol; its Gaussian count is not a comparable budget")
-    if baseline_summary.get("deviations"):
-        raise ValueError(f"the baseline run deviates from the protocol {sorted(baseline_summary['deviations'])}")
     if seed is not None and baseline_summary.get("seed") != seed:
         raise ValueError(f"the baseline run used seed {baseline_summary.get('seed')}, this run uses seed {seed}")
     return count, {

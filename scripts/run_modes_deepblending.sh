@@ -8,10 +8,12 @@
 # Chay lai an toan: lan chay nao da co summary.json OK se duoc bo qua.
 #
 # Cach chay (tren pod, sau setup_gsplat.sh):
-#   bash scripts/run_modes_deepblending.sh
+#   QUICK=1 bash scripts/run_modes_deepblending.sh   # chay thu toan bo luong (3000 vong, vai phut moi canh)
+#   bash scripts/run_modes_deepblending.sh           # luot day du (30000 vong)
 #
 # Bien tuy chon:
-#   WS=/workspace  ENV_NAME=gs-gsplat  OUT_ROOT=$WS/outputs/modes_db
+#   QUICK=1        3000 vong, ket qua vao $WS/outputs/modes_db_quick; khong doi chieu so lieu (chi kiem tra chay duoc)
+#   WS=/workspace  ENV_NAME=gs-gsplat  OUT_ROOT=$WS/outputs/modes_db (QUICK: $WS/outputs/modes_db_quick)
 #   SEEDS="42"              vd. SEEDS="42 43 44" de chay lap (docs/plan.md muc 4.2)
 #   MCMC_DB_SET="opacity_reg=0.001"   paper 3DGS-MCMC dung lambda_o = 0.001 cho Deep Blending (de trong = 0.01)
 #   CONFIG=configs/baseline_deepblending.json
@@ -23,7 +25,14 @@ REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CONFIG="${CONFIG:-$REPO_DIR/configs/baseline_deepblending.json}"
 WS="${WS:-/workspace}"
 ENV_NAME="${ENV_NAME:-gs-gsplat}"
-OUT_ROOT="${OUT_ROOT:-$WS/outputs/modes_db}"
+QUICK="${QUICK:-0}"
+RUN_ARGS=()
+NAME_TAG="modes_db"
+if [ "$QUICK" = "1" ]; then
+  RUN_ARGS=(--protocol max_steps=3000)  # ghi la sai khac protocol; khong bao gio tron voi luot chuan
+  NAME_TAG="modes_db_quick"
+fi
+OUT_ROOT="${OUT_ROOT:-$WS/outputs/$NAME_TAG}"
 B0_ROOT="${B0_ROOT:-$WS/outputs/baseline_inria/db}"
 SEEDS="${SEEDS:-42}"
 MCMC_DB_SET="${MCMC_DB_SET-opacity_reg=0.001}"
@@ -33,7 +42,7 @@ REPORT_DIR="$WS/reports"
 STAMP="$(date +%Y%m%d_%H%M%S)"
 
 mkdir -p "$LOG_DIR" "$REPORT_DIR" "$OUT_ROOT" "$DATA_DIR/downloads"
-LOG="$LOG_DIR/modes_db_$STAMP.log"
+LOG="$LOG_DIR/${NAME_TAG}_$STAMP.log"
 exec > >(tee -a "$LOG") 2>&1
 
 step() { printf '\n===== [%s] %s =====\n' "$(date +%H:%M:%S)" "$1"; }
@@ -73,6 +82,9 @@ if [ -n "$MCMC_DB_SET" ]; then
   MCMC_EXTRA=(--set "$MCMC_DB_SET")
 fi
 echo "scenes: ${SCENES[*]} | seeds: ${SEED_LIST[*]} | mcmc extra: ${MCMC_EXTRA[*]-none} | output: $OUT_ROOT"
+if [ "$QUICK" = "1" ]; then
+  echo "QUICK mode: ${RUN_ARGS[*]} (smoke test of the whole flow, numbers are not results)"
+fi
 
 # ---------------------------------------------------------------------------
 step "1. Dataset"
@@ -106,7 +118,7 @@ for seed in "${SEED_LIST[@]}"; do
     base="$OUT_ROOT/$scene/default_s$seed"
     step "2. default | $scene | seed $seed"
     if ! python -m indoor3d.train.run --mode default --scene "$src" --scene-name "$scene" --out "$base" \
-         --seed "$seed" --gsplat-dir "$WS/code/gsplat" --rerun-incomplete; then
+         --seed "$seed" --gsplat-dir "$WS/code/gsplat" --rerun-incomplete "${RUN_ARGS[@]}"; then
       echo "default failed for $scene (seed $seed); skipping its mcmc run"
       FAILED=1
       continue
@@ -114,23 +126,29 @@ for seed in "${SEED_LIST[@]}"; do
     step "3. mcmc (same Gaussian count) | $scene | seed $seed"
     python -m indoor3d.train.run --mode mcmc --scene "$src" --scene-name "$scene" \
       --out "$OUT_ROOT/$scene/mcmc_s$seed" --seed "$seed" --gsplat-dir "$WS/code/gsplat" --rerun-incomplete \
-      --cap-max-from "$base" "${MCMC_EXTRA[@]}" || FAILED=1
+      --cap-max-from "$base" "${MCMC_EXTRA[@]}" "${RUN_ARGS[@]}" || FAILED=1
   done
 done
 
 # ---------------------------------------------------------------------------
-step "4. Compare modes and check the baseline against Inria (published numbers and own B0 run)"
-B0_ARGS=()
-if [ -d "$B0_ROOT" ]; then
-  B0_ARGS=(--b0-root "$B0_ROOT")
+REPORT="$REPORT_DIR/${NAME_TAG}_$STAMP"
+if [ "$QUICK" = "1" ]; then
+  step "4. Summary table of the quick runs (no comparison with reference numbers)"
+  python -m indoor3d.eval.compare_modes --root "$OUT_ROOT" --baseline default --modes default mcmc \
+    --include-deviating --out "$REPORT.json" --markdown "$REPORT.md"
 else
-  echo "no own Inria run in $B0_ROOT (run scripts/run_baseline_deepblending.sh): only published numbers are used"
+  step "4. Compare modes and check the baseline against Inria (published numbers and own B0 run)"
+  B0_ARGS=()
+  if [ -d "$B0_ROOT" ]; then
+    B0_ARGS=(--b0-root "$B0_ROOT")
+  else
+    echo "no own Inria run in $B0_ROOT (run scripts/run_baseline_deepblending.sh): only published numbers are used"
+  fi
+  python -m indoor3d.eval.compare_modes --root "$OUT_ROOT" --baseline default --modes default mcmc \
+    --reference-config "$CONFIG" "${B0_ARGS[@]}" --out "$REPORT.json" --markdown "$REPORT.md"
 fi
-python -m indoor3d.eval.compare_modes --root "$OUT_ROOT" --baseline default --modes default mcmc \
-  --reference-config "$CONFIG" "${B0_ARGS[@]}" \
-  --out "$REPORT_DIR/modes_db_$STAMP.json" --markdown "$REPORT_DIR/modes_db_$STAMP.md"
 
 echo
 echo "DONE. Log: $LOG"
-echo "Send back: $REPORT_DIR/modes_db_$STAMP.md and .json (and $LOG if something failed)"
+echo "Send back: $REPORT.md and .json (and $LOG if something failed)"
 exit "$FAILED"

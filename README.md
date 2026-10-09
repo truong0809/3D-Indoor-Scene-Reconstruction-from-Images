@@ -42,7 +42,7 @@ Phương pháp và các bước kiểm chứng: [docs/plan.md](docs/plan.md). Th
 
 ## Chạy trên pod Runpod
 
-Thứ tự lần đầu (chi tiết trong [docs/environment.md](docs/environment.md)):
+Thứ tự lần đầu (hướng dẫn lượt chạy thử đầu tiên: [docs/environment.md](docs/environment.md), mục 4.4):
 
 ```bash
 bash scripts/env_probe.sh                         # 1. ghi nhận môi trường (chỉ đọc)
@@ -50,6 +50,7 @@ bash scripts/setup_3dgs_inria.sh                  # 2. cài 3DGS gốc (sau khi 
 bash scripts/setup_gsplat.sh                      #    cài gsplat cho hai chế độ Default / MCMC
 bash scripts/setup_data_tools.sh                  # 3. cài COLMAP + ffmpeg
 bash scripts/run_baseline_deepblending.sh         # 4. tái lập baseline Inria trên Deep Blending
+QUICK=1 bash scripts/run_modes_deepblending.sh    #    chạy thử trọn luồng gsplat (3.000 vòng, chỉ kiểm tra)
 bash scripts/run_modes_deepblending.sh            #    default vs mcmc trên Deep Blending, đối chiếu với Inria
 bash scripts/prepare_scene.sh <video.mp4> <cảnh>  # 5. chuẩn bị một cảnh tự quay
 bash scripts/train_scene.sh <cảnh> default        #    huấn luyện baseline, rồi: train_scene.sh <cảnh> mcmc

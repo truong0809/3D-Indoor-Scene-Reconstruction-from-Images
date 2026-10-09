@@ -12,6 +12,7 @@
 #   MAX_JOBS=8             so tien trinh bien dich song song
 #   FORCE_REBUILD=1        build lai gsplat va fused-ssim
 #   ALLOW_PROVISIONAL=1    cho phep chay khi phien ban trong file conf con "provisional"
+#   TORCH_CUDA_OVERRIDE=cu126  doi bien the CUDA cua PyTorch (khi driver cua pod cu hon CUDA trong conf)
 #
 # Phien ban ghim doc tu environment/gs-gsplat.conf va environment/gs-gsplat.lock.txt.
 # Xem docs/environment.md (muc 4.3) va docs/design/training_modes.md.
@@ -27,6 +28,13 @@ for v in PYTHON_VERSION TORCH_VERSION TORCHVISION_VERSION TORCH_CUDA TORCH_CUDA_
          GSPLAT_REPO GSPLAT_COMMIT FUSED_SSIM_REPO FUSED_SSIM_COMMIT LOCK_FILE; do
   [ -n "${!v:-}" ] || { echo "ERROR: $v is missing in $CONF" >&2; exit 1; }
 done
+# Doi bien the CUDA cua PyTorch ma khong sua file conf (vd. driver cua pod chi ho tro CUDA 12.6):
+#   TORCH_CUDA_OVERRIDE=cu126 bash <script>      (dung cung gia tri cho setup_3dgs_inria.sh va setup_gsplat.sh)
+if [ -n "${TORCH_CUDA_OVERRIDE:-}" ]; then
+  [[ "$TORCH_CUDA_OVERRIDE" =~ ^cu[0-9]{3}$ ]] || { echo "ERROR: TORCH_CUDA_OVERRIDE must look like cu126" >&2; exit 1; }
+  CONF_TORCH_CUDA="$TORCH_CUDA"
+  TORCH_CUDA="$TORCH_CUDA_OVERRIDE"
+fi
 LOCK="$REPO_DIR/$LOCK_FILE"
 [ -r "$LOCK" ] || { echo "ERROR: missing $LOCK" >&2; exit 1; }
 
@@ -65,7 +73,7 @@ command -v curl >/dev/null 2>&1 || die "curl not found"
 INRIA_CONF="$REPO_DIR/environment/gs-inria.conf"
 if [ -r "$INRIA_CONF" ]; then
   # shellcheck source=/dev/null
-  inria_torch="$(. "$INRIA_CONF" && echo "$TORCH_VERSION+$TORCH_CUDA")"
+  inria_torch="$(. "$INRIA_CONF" && echo "$TORCH_VERSION+${TORCH_CUDA_OVERRIDE:-$TORCH_CUDA}")"
   [ "$inria_torch" = "$TORCH_VERSION+$TORCH_CUDA" ] \
     || warn "PyTorch differs from gs-inria.conf ($inria_torch vs $TORCH_VERSION+$TORCH_CUDA): record it when comparing B0 and B1"
 fi
@@ -76,6 +84,9 @@ GPU_MIB="$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/
 DRIVER_CUDA="$(nvidia-smi 2>/dev/null | grep -oE 'CUDA Version: *[0-9]+\.[0-9]+' | grep -oE '[0-9]+\.[0-9]+' | head -n 1 || true)"
 echo "GPU: ${GPU_NAME:-?} | compute capability: ${GPU_CC:-?} | VRAM: ${GPU_MIB:-?} MiB"
 echo "Driver supports CUDA: ${DRIVER_CUDA:-?} | requested PyTorch: $TORCH_VERSION+$TORCH_CUDA (CUDA $REQ_CUDA)"
+if [ -n "${CONF_TORCH_CUDA:-}" ]; then
+  warn "TORCH_CUDA_OVERRIDE: using $TORCH_CUDA instead of $CONF_TORCH_CUDA from $CONF (recorded in the report)"
+fi
 
 [ -n "$DRIVER_CUDA" ] || die "cannot read the driver CUDA version from nvidia-smi"
 ver_ge "$DRIVER_CUDA" "$REQ_CUDA" \
@@ -240,7 +251,7 @@ SUMMARY="$REPORT_DIR/setup_gsplat_$STAMP.txt"
   git -C "$CODE_DIR" submodule status
   echo "fused-ssim commit: $FUSED_SSIM_COMMIT"
   echo "lock file: $LOCK_FILE (sha256 $(sha256sum "$LOCK" | cut -c1-16))"
-  echo "conf: $CONF (ENV_STATUS=${ENV_STATUS:-unset})"
+  echo "conf: $CONF (ENV_STATUS=${ENV_STATUS:-unset})${CONF_TORCH_CUDA:+ | TORCH_CUDA_OVERRIDE=$TORCH_CUDA (conf: $CONF_TORCH_CUDA)}"
 } | tee "$SUMMARY"
 pip freeze > "$REPORT_DIR/pip_freeze_${ENV_NAME}_$STAMP.txt"
 conda env export -n "$ENV_NAME" --no-builds > "$REPORT_DIR/conda_env_${ENV_NAME}_$STAMP.yml"

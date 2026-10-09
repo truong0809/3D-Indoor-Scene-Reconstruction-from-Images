@@ -87,12 +87,13 @@ Chưa có. Dự kiến lưu trên network volume của Runpod tại `/workspace`
 | 6 | Xuất mô hình cho web và viewer web bản thô | Mở được mô hình mẫu trên trình duyệt; có số đo thời gian tải; có kiểm thử chuyển đổi định dạng |
 | — | Quay thử 1 cảnh theo `docs/data/capture_protocol.md` | Có video chính + đoạn quay kiểm tra, đặt tên và ghi metadata đúng quy ước |
 
-**Lượt chạy Runpod (theo thứ tự)**
+**Lượt chạy Runpod (theo thứ tự; hướng dẫn chi tiết: `docs/environment.md` mục 4.4)**
 
 | Bước | Việc | Tiêu chí nghiệm thu |
 |---|---|---|
 | 1 | `scripts/env_probe.sh` | SUMMARY báo PASS cho VRAM ≥ 24 GB, PyTorch nhận GPU và mọi host cần thiết truy cập được; `/workspace` là network volume còn trống ≥ 50 GB |
 | 3 | Chốt `environment/gs-inria.conf` và `environment/gs-gsplat.conf` từ báo cáo Bước 1; `scripts/setup_3dgs_inria.sh`; `scripts/setup_gsplat.sh`; `scripts/setup_data_tools.sh` | Hết 9 bước mỗi script, cả hai smoke test PASSED; COLMAP và ffmpeg chạy được; có file pip freeze / conda env |
 | 4 | `scripts/run_baseline_deepblending.sh` | Trung bình 2 cảnh lệch so với Inria (PSNR 29.690, SSIM 0.906, LPIPS 0.238) không quá 0,5 dB / 0,01 / 0,01 |
+| 4a | `QUICK=1 bash scripts/run_modes_deepblending.sh` (chạy thử trọn luồng gsplat, 3.000 vòng) | Có `summary.json` status OK cho `default` và `mcmc` ở cả 2 cảnh; bảng `modes_db_quick_*.md` được tạo |
 | 4b | `scripts/run_modes_deepblending.sh` (sau Bước 4) | `default` lệch so với lượt B0 tự chạy không quá 0,5 dB / 0,01 / 0,01 ở từng cảnh (điều kiện để dùng gsplat làm baseline); `mcmc` chạy xong với ngân sách EQUAL; mọi mục điều kiện trong báo cáo `modes_db_*.md` là OK (riêng số seed có thể FEW ở lượt đầu) |
 | 5 | `scripts/prepare_scene.sh` với cảnh quay thử, rồi `scripts/train_scene.sh <cảnh> default` và `mcmc` | `sfm_report.json` không FAIL; có `summary.json` cho cả hai chế độ; mô hình xem được trên viewer |
