@@ -43,7 +43,9 @@ Chỉ mức cuối cùng mới được tính là hoàn thành.
 | Kế hoạch Giai đoạn 0 | Đã viết, đã được duyệt | `docs/plan.md` |
 | Danh sách tài liệu khảo sát ban đầu | Đã viết | `docs/research/reading_list.md` (venue/link chưa kiểm chứng hết) |
 | Khung repository | Đã viết | `README.md`, `PROJECT_STATUS.md`, `.gitignore`, `.gitattributes` |
-| `scripts/env_probe.sh` | Đã viết, đã chạy thử trong sandbox không có GPU | Cú pháp và shellcheck sạch; các mục GPU báo FAIL đúng như mong đợi; không in biến môi trường bí mật (đã thử với API key giả). **Chưa chạy trên Runpod.** |
+| `scripts/env_probe.sh` (v2) | Đã viết, đã chạy thử trong sandbox không có GPU | Cú pháp và shellcheck sạch; các mục GPU báo FAIL đúng như mong đợi; không in biến môi trường bí mật (đã thử với API key giả). v2 kiểm tra thêm gitlab.inria.fr, download.pytorch.org, conda.anaconda.org. **Chưa chạy trên Runpod.** |
+| Khảo sát yêu cầu cài đặt repo Inria | Đã kiểm tra trên mã nguồn | Commit ghim, submodule, `environment.yml`, mốc số liệu Deep Blending — ghi trong `docs/environment.md` |
+| `scripts/setup_3dgs_inria.sh`, `scripts/smoke_test_3dgs.py`, `environment/gs-inria.conf` | Đã viết; đã chạy thử một phần trong sandbox không có GPU | Cú pháp và shellcheck/py_compile sạch. Đã chạy thử: cổng `provisional` và kiểm tra thiếu GPU dừng đúng; bước clone repo Inria và submodule (kể cả dự phòng mirror simple-knn) cho đúng commit ghim. **Các bước cài PyTorch, build extension và smoke test chưa chạy trên GPU.** Phiên bản PyTorch/CUDA đang ở trạng thái `provisional` |
 
 ## Chưa xác minh / còn mở
 
@@ -54,7 +56,7 @@ Chỉ mức cuối cùng mới được tính là hoàn thành.
 
 ## Môi trường
 
-Chưa có số liệu thực tế. Sẽ ghi lại sau khi chạy `scripts/env_probe.sh` trên pod.
+Phương án đề xuất và bố cục `/workspace`: `docs/environment.md`. Chưa có số liệu thực tế; sẽ ghi lại sau khi chạy `scripts/env_probe.sh` trên pod.
 
 ## Dữ liệu, checkpoint, kết quả
 
@@ -64,8 +66,8 @@ Chưa có. Dự kiến lưu trên network volume của Runpod tại `/workspace`
 
 | Bước | Việc | Tiêu chí nghiệm thu |
 |---|---|---|
-| 1 | Tạo pod Runpod, chạy `scripts/env_probe.sh` | SUMMARY báo PASS cho VRAM ≥ 24 GB và PyTorch nhận GPU; `/workspace` là network volume còn trống ≥ 50 GB; github.com, pypi.org, repo-sam.inria.fr trả mã 2xx/3xx; báo cáo lưu trong `/workspace/reports`; pod đã Stop |
-| 3 | Cài môi trường 3DGS gốc có khóa phiên bản trên `/workspace`, build CUDA extension | Build thành công; có file khóa phiên bản; chạy được smoke test |
-| 4 | Huấn luyện và đánh giá trên 1–2 cảnh nội thất công khai | Chỉ số nằm trong ngưỡng so với số liệu Inria công bố cho cùng phiên bản code |
+| 1 | Tạo pod Runpod, chạy `scripts/env_probe.sh` | SUMMARY báo PASS cho VRAM ≥ 24 GB, PyTorch nhận GPU và mọi host cần thiết truy cập được; `/workspace` là network volume còn trống ≥ 50 GB; báo cáo lưu trong `/workspace/reports`; pod đã Stop |
+| 3 | Chốt phiên bản trong `environment/gs-inria.conf` từ báo cáo Bước 1, rồi chạy `scripts/setup_3dgs_inria.sh` | Script chạy hết 9 bước; smoke test báo PASSED; có file pip freeze và conda env trong `/workspace/reports` |
+| 4 | Huấn luyện và đánh giá 3DGS gốc trên Deep Blending (playroom, drjohnson) | Trung bình 2 cảnh lệch so với số liệu Inria (PSNR 29.690, SSIM 0.906, LPIPS 0.238) không quá 0,5 dB / 0,01 / 0,01; đủ log, cấu hình và thời gian huấn luyện |
 | 5 | Cài COLMAP, chạy một cảnh tự quay từ video | Có camera + điểm thưa, tỉ lệ ảnh đăng ký được ghi lại, mô hình 3DGS xem được |
 | 6 | Viewer web bản thô | Mở được mô hình đã xuất trên trình duyệt, đo thời gian tải |

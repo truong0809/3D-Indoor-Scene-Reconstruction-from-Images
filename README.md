@@ -22,7 +22,11 @@ Các thành phần cụ thể sẽ được chốt sau khảo sát và thử ngh
 | `PROJECT_STATUS.md` | Trạng thái hiện tại, quyết định đã chốt, việc tiếp theo |
 | `docs/plan.md` | Kế hoạch tổng thể: phạm vi, mốc nghiệm thu, rủi ro |
 | `docs/research/reading_list.md` | Danh sách tài liệu cần khảo sát |
+| `docs/environment.md` | Môi trường thực nghiệm: bố cục trên pod, phiên bản ghim, mốc đối chiếu |
+| `environment/gs-inria.conf` | Phiên bản ghim cho môi trường 3DGS gốc |
 | `scripts/env_probe.sh` | Kiểm tra môi trường GPU của pod (chỉ đọc) |
+| `scripts/setup_3dgs_inria.sh` | Cài môi trường 3DGS gốc của Inria trong `/workspace` |
+| `scripts/smoke_test_3dgs.py` | Kiểm tra nhanh các CUDA extension sau khi build |
 
 ## Hạ tầng tính toán
 
@@ -36,6 +40,14 @@ OUT_DIR=/tmp bash scripts/env_probe.sh     # đổi nơi lưu báo cáo
 ```
 
 Script chỉ đọc thông tin hệ thống, không cài đặt gì và không in biến môi trường bí mật.
+
+### Cài môi trường 3DGS gốc
+
+```bash
+bash scripts/setup_3dgs_inria.sh
+```
+
+Chỉ chạy sau khi phiên bản trong `environment/gs-inria.conf` đã được chốt từ báo cáo môi trường. Chi tiết xem [docs/environment.md](docs/environment.md).
 
 ## Quy ước
 

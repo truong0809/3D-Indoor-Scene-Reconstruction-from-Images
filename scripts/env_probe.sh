@@ -11,7 +11,7 @@
 
 set -u
 
-SCRIPT_VERSION="1"
+SCRIPT_VERSION="2"
 OUT_DIR="${OUT_DIR:-/workspace/reports}"
 mkdir -p "$OUT_DIR" || { echo "Cannot create $OUT_DIR" >&2; exit 1; }
 OUT="$OUT_DIR/env_$(date +%Y%m%d_%H%M%S).txt"
@@ -141,14 +141,24 @@ PYEOF
   awk '$2=="/workspace" {print $2, $3}' /proc/mounts 2>/dev/null | grep . \
     || echo "(no separate mount for /workspace)"
 
-  section "Internet access (needed for code and datasets)"
+  section "Internet access (needed for code, packages and datasets)"
+  # github / gitlab.inria.fr: source code; pypi / pytorch / conda: packages;
+  # repo-sam.inria.fr: Inria datasets and reference data.
+  net_bad=""
   if command -v curl >/dev/null 2>&1; then
-    for url in https://github.com https://pypi.org https://repo-sam.inria.fr; do
+    for url in https://github.com https://gitlab.inria.fr/bkerbl/simple-knn https://pypi.org/simple/ \
+               https://download.pytorch.org/whl/ https://conda.anaconda.org/conda-forge/ \
+               https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/; do
       code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "$url" 2>/dev/null)" || code="fail"
       echo "$url -> $code"
+      case "$code" in
+        2??|3??) ;;
+        *) net_bad="$net_bad $url" ;;
+      esac
     done
   else
     echo "(curl not found)"
+    net_bad=" (curl not found)"
   fi
 
   section "SUMMARY (automatic checks)"
@@ -181,6 +191,11 @@ PYEOF
     echo "[PASS] /workspace free space ${free_gb} GB (>= 50 GB)"
   else
     echo "[WARN] /workspace free space ${free_gb:-unknown} GB (< 50 GB or unknown)"
+  fi
+  if [ -z "$net_bad" ]; then
+    echo "[PASS] all required hosts reachable"
+  else
+    echo "[WARN] not reachable (HTTP code not 2xx/3xx):$net_bad"
   fi
 } 2>&1 | tee "$OUT"
 

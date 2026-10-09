@@ -148,6 +148,7 @@ Chọn sau khi phân tích thất bại của baseline ở giai đoạn 4.
 - **Điều kiện so sánh:** cùng pose camera, cùng độ phân giải, cùng số vòng lặp, cùng GPU.
 - **Dataset công khai:** dùng đúng cách chia train/test của paper (3DGS gốc dùng cách chia kiểu Mip-NeRF 360). Đối chiếu với số liệu của đúng phiên bản code, vì mô hình pretrained của Inria cho chỉ số khác paper do codebase đã được sửa lỗi.
 - **Video tự quay dễ rò rỉ dữ liệu:** frame test sát frame train gần như trùng nhau, làm điểm số bị thổi phồng. Quay thêm một đoạn quỹ đạo riêng để kiểm tra, hoặc tách tập test theo các đoạn cách xa nhau.
+- **Bù phơi sáng làm đổi cách chia dữ liệu:** với `--train_test_exp`, Inria đưa nửa trái ảnh test vào huấn luyện và chỉ đánh giá nửa phải. Số liệu cấu hình này không được so trực tiếp với cấu hình chuẩn.
 - **Nguồn số liệu:** luôn tách bạch số liệu công bố trong paper với số liệu tự chạy.
 - **Kết luận "cải thiện":** chạy lặp nhiều seed (đề xuất ≥ 3) trên ít nhất một tập con.
 - **Lưu vết:** mỗi lần chạy lưu commit hash, file cấu hình, thông tin môi trường, log và chỉ số dạng JSON/CSV.
