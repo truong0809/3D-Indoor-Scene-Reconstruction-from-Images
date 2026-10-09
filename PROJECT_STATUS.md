@@ -49,7 +49,7 @@ Chỉ mức cuối cùng mới được tính là hoàn thành.
 
 - Câu trả lời của GVHD cho Q1–Q3 và Q5–Q12 (`docs/plan.md`, mục 2) — đang dùng giả định tạm.
 - Cấu hình pod thực tế: loại GPU, data center, template và image tag, giá/giờ.
-- Chưa chọn LICENSE cho repository (repo đang public).
+- Chưa chọn LICENSE cho repository (repo hiện để private).
 - Chưa đăng ký quyền truy cập ScanNet++.
 
 ## Môi trường
