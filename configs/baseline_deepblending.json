@@ -1,0 +1,20 @@
+{
+  "name": "baseline_inria_deepblending",
+  "description": "Tái lập 3DGS gốc (Inria, commit 54c035f) trên 2 cảnh trong nhà của Deep Blending, tham số giống full_eval.py của Inria",
+  "data": {
+    "url": "https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/datasets/input/tandt_db.zip",
+    "archive_dir": "tandt_db",
+    "subdir": "db"
+  },
+  "scenes": ["drjohnson", "playroom"],
+  "train_args": ["--disable_viewer", "--quiet", "--eval", "--test_iterations", "-1"],
+  "render_iterations": [7000, 30000],
+  "render_args": ["--quiet", "--eval", "--skip_train"],
+  "method": "ours_30000",
+  "iteration": 30000,
+  "reference": {
+    "metrics": {"PSNR": 29.690, "SSIM": 0.906, "LPIPS": 0.238},
+    "source": "Inria gaussian-splatting results.md, charts assets/charts/base_{PSNR,SSIM,LPIPS}.png: default rasterizer, ORIGINAL configuration, Deep Blending mean (checked 2026-10-09)"
+  },
+  "tolerance": {"PSNR": 0.5, "SSIM": 0.01, "LPIPS": 0.01}
+}

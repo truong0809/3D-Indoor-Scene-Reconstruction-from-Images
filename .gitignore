@@ -1,10 +1,11 @@
 # --- Dữ liệu và kết quả lớn: lưu trên Runpod network volume / ổ ngoài, không đưa lên Git ---
-data/
-datasets/
-outputs/
-output/
-checkpoints/
-results/raw/
+# Dấu "/" ở đầu: chỉ áp dụng cho thư mục ở gốc repo (không chặn docs/data/ hay src/indoor3d/data/).
+/data/
+/datasets/
+/outputs/
+/output/
+/checkpoints/
+/results/raw/
 *.ckpt
 *.pth
 *.pt
@@ -26,6 +27,8 @@ results/raw/
 venv/
 __pycache__/
 *.py[cod]
+.pytest_cache/
+*.egg-info/
 .ipynb_checkpoints/
 .cache/
 wandb/

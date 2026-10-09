@@ -4,16 +4,16 @@
 
 Hệ thống nhận ảnh hoặc video quay không gian nội thất bằng camera thông thường (không yêu cầu LiDAR), tái tạo cảnh 3D bằng **3D Gaussian Splatting (3DGS)**, cho phép xem và tương tác trên trình xem 3D, và đánh giá chất lượng bằng thực nghiệm.
 
-> **Trạng thái:** đang thiết lập môi trường. Chưa có pipeline, mô hình hay kết quả thực nghiệm.
+> **Trạng thái:** đã có script cài đặt, tái lập baseline và chuẩn bị dữ liệu, kiểm thử trên CPU. Chưa chạy trên GPU, chưa có mô hình hay kết quả thực nghiệm.
 > Chi tiết xem [PROJECT_STATUS.md](PROJECT_STATUS.md).
 
-## Pipeline dự kiến
+## Pipeline
 
 ```
-Ảnh / video → chọn frame → ước lượng camera (SfM) → huấn luyện 3DGS → đánh giá → xuất & nén → viewer web
+Video / ảnh → chọn frame nét → COLMAP (camera + điểm thưa) → huấn luyện 3DGS → đánh giá → xuất & nén → viewer web
 ```
 
-Các thành phần cụ thể sẽ được chốt sau khảo sát và thử nghiệm — xem [docs/plan.md](docs/plan.md).
+Phương pháp và các bước kiểm chứng: [docs/plan.md](docs/plan.md).
 
 ## Cấu trúc repository
 
@@ -21,36 +21,39 @@ Các thành phần cụ thể sẽ được chốt sau khảo sát và thử ngh
 |---|---|
 | `PROJECT_STATUS.md` | Trạng thái hiện tại, quyết định đã chốt, việc tiếp theo |
 | `docs/plan.md` | Kế hoạch tổng thể: phạm vi, mốc nghiệm thu, rủi ro |
+| `docs/environment.md` | Môi trường trên pod, phiên bản ghim, mốc đối chiếu, sự cố đã biết |
+| `docs/data/capture_protocol.md` | Quy trình quay video không gian nội thất |
 | `docs/research/reading_list.md` | Danh sách tài liệu cần khảo sát |
-| `docs/environment.md` | Môi trường thực nghiệm: bố cục trên pod, phiên bản ghim, mốc đối chiếu |
-| `environment/gs-inria.conf` | Phiên bản ghim cho môi trường 3DGS gốc |
-| `scripts/env_probe.sh` | Kiểm tra môi trường GPU của pod (chỉ đọc) |
-| `scripts/setup_3dgs_inria.sh` | Cài môi trường 3DGS gốc của Inria trong `/workspace` |
-| `scripts/smoke_test_3dgs.py` | Kiểm tra nhanh các CUDA extension sau khi build |
+| `environment/` | Phiên bản ghim: `gs-inria.conf` (3DGS gốc), `gs-tools.conf` (COLMAP, ffmpeg) |
+| `configs/` | Cấu hình thực nghiệm, gồm số liệu tham chiếu và ngưỡng chấp nhận |
+| `src/indoor3d/` | Mã nguồn pipeline: `data/` (chọn frame), `sfm/` (COLMAP), `eval/` (so sánh kết quả) |
+| `scripts/` | Lệnh chạy trên pod (cài đặt, tái lập baseline, chuẩn bị cảnh) |
+| `tests/` | Kiểm thử chạy trên CPU, dùng dữ liệu tổng hợp |
 
-## Hạ tầng tính toán
+## Chạy trên pod Runpod
 
-Huấn luyện chạy trên GPU thuê theo giờ tại Runpod. Dữ liệu, checkpoint và kết quả lưu trên network volume của pod (`/workspace`), không đưa lên Git.
-
-### Kiểm tra môi trường pod
+Thứ tự lần đầu (chi tiết trong [docs/environment.md](docs/environment.md)):
 
 ```bash
-bash scripts/env_probe.sh                  # báo cáo lưu vào /workspace/reports/
-OUT_DIR=/tmp bash scripts/env_probe.sh     # đổi nơi lưu báo cáo
+bash scripts/env_probe.sh                         # 1. ghi nhận môi trường (chỉ đọc)
+bash scripts/setup_3dgs_inria.sh                  # 2. cài 3DGS gốc (sau khi chốt phiên bản)
+bash scripts/setup_data_tools.sh                  # 3. cài COLMAP + ffmpeg
+bash scripts/run_baseline_deepblending.sh         # 4. tái lập baseline trên Deep Blending
+bash scripts/prepare_scene.sh <video.mp4> <cảnh>  # 5. chuẩn bị một cảnh tự quay
 ```
 
-Script chỉ đọc thông tin hệ thống, không cài đặt gì và không in biến môi trường bí mật.
+Script cài đặt chỉ chạy khi phiên bản trong `environment/gs-inria.conf` đã được chốt từ báo cáo môi trường.
 
-### Cài môi trường 3DGS gốc
+## Kiểm thử trên máy không có GPU
 
 ```bash
-bash scripts/setup_3dgs_inria.sh
+pip install numpy opencv-python-headless pytest
+python -m pytest            # cần ffmpeg cho một test tích hợp; test đó tự bỏ qua nếu thiếu
 ```
-
-Chỉ chạy sau khi phiên bản trong `environment/gs-inria.conf` đã được chốt từ báo cáo môi trường. Chi tiết xem [docs/environment.md](docs/environment.md).
 
 ## Quy ước
 
 - Không đưa dataset, checkpoint, file `.ply`, video hay log thô lên Git.
 - Không đưa token, mật khẩu, API key hoặc file `.env` lên Git.
 - Mọi số liệu trong báo cáo phải truy được về file kết quả, cấu hình và commit tương ứng.
+- Dữ liệu trong `tests/` là dữ liệu tổng hợp để kiểm tra logic, không phải kết quả thực nghiệm.

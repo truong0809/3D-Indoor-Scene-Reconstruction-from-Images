@@ -10,8 +10,12 @@ _Cập nhật: 09/10/2026 · Trạng thái: **đề xuất** — phiên bản Py
 /workspace/
 ├── repo/                     # clone repo GitHub của đồ án (private, qua deploy key)
 ├── code/gaussian-splatting/  # repo 3DGS của Inria, ghim theo commit
-├── miniforge3/               # conda (Miniforge) + env gs-inria
-├── data/                     # dataset: Deep Blending, Mip-NeRF 360, dữ liệu tự quay
+├── miniforge3/               # conda (Miniforge) + env gs-inria (3DGS) + env gs-tools (COLMAP, ffmpeg)
+├── data/
+│   ├── downloads/            # file tải về (tandt_db.zip, ...)
+│   ├── tandt_db/             # dữ liệu COLMAP do Inria cung cấp (Deep Blending, Tanks&Temples)
+│   ├── raw/                  # video/ảnh gốc tự quay
+│   └── scenes/<tên_cảnh>/    # input/ (frame đã chọn), images/ + sparse/0 (sau COLMAP), báo cáo
 ├── outputs/                  # mô hình đã huấn luyện, ảnh render, chỉ số
 ├── reports/                  # báo cáo môi trường, pip freeze, conda env
 ├── logs/                     # log cài đặt và huấn luyện
@@ -99,6 +103,24 @@ Kích hoạt env trong phiên terminal mới:
 . /workspace/miniforge3/etc/profile.d/conda.sh && conda activate gs-inria
 ```
 
+### 4.1 Công cụ xử lý dữ liệu (env `gs-tools`)
+
+COLMAP và ffmpeg được cài vào conda env riêng `gs-tools`, tách khỏi `gs-inria` để tránh xung đột thư viện. Phiên bản ghim trong `environment/gs-tools.conf`: COLMAP 4.2.1 từ conda-forge (bản mới nhất khi kiểm tra ngày 09/10/2026, có bản build CUDA và bản CPU).
+
+```bash
+bash scripts/setup_data_tools.sh                          # bản CUDA
+COLMAP_BUILD_OVERRIDE=cpu bash scripts/setup_data_tools.sh  # nếu driver không hợp với bản CUDA
+```
+
+Vì sao không dùng `convert.py` của Inria: script này truyền `--SiftExtraction.use_gpu` và `--SiftMatching.use_gpu`. Mã nguồn COLMAP hiện hành đã đổi thành `--FeatureExtraction.use_gpu` và `--FeatureMatching.use_gpu` (thay đổi nằm trong đợt tái cấu trúc trích đặc trưng của bản 3.13), nên `convert.py` không chạy được với COLMAP 4.x. `src/indoor3d/sfm/colmap_runner.py` làm đúng các bước của `convert.py` nhưng tự nhận tên tùy chọn theo phiên bản COLMAP.
+
+### 4.2 Các lệnh chạy chính trên pod
+
+```bash
+bash scripts/run_baseline_deepblending.sh                       # Bước 4: tái lập trên Deep Blending
+bash scripts/prepare_scene.sh <video.mp4> <tên_cảnh>            # Bước 5: frame -> COLMAP -> báo cáo
+```
+
 ## 5. Mốc đối chiếu cho Bước 4
 
 Bước 4 tái lập kết quả trên **Deep Blending**: 2 cảnh trong nhà (playroom, drjohnson), Inria cung cấp sẵn dữ liệu COLMAP trong `tandt_db.zip`.
@@ -119,6 +141,8 @@ Số liệu Inria công bố cho code hiện hành (`results.md`, rasterizer m�
 - `simple-knn` tải từ gitlab.inria.fr. Trang web của host này có lớp chống bot và từ chối một số truy cập tự động. Nếu git không clone được, script tự lấy cùng commit `86710c2` từ mirror GitHub; vì commit được xác định bằng mã SHA nên mã nguồn giống hệt bản gốc. Đường dự phòng này đã chạy thử thành công trong sandbox.
 - `metrics.py` tải trọng số VGG và LPIPS từ Internet ở lần chạy đầu.
 - Khi bật bù phơi sáng (`--train_test_exp`), Inria đưa nửa trái ảnh test vào huấn luyện và chỉ đánh giá nửa phải. Số liệu khi đó không so được với cấu hình chuẩn.
+- Với `--eval`, code Inria luôn lấy mỗi ảnh thứ 8 (theo thứ tự tên) làm ảnh test: giá trị `llffhold=8` được gán cứng ở chỗ gọi hàm. Nhánh đọc danh sách ảnh test từ `sparse/0/test.txt` có trong code nhưng không bật được qua tham số dòng lệnh. Muốn dùng đoạn quay kiểm tra riêng (theo `docs/data/capture_protocol.md`), cần thêm một thay đổi nhỏ hoặc công cụ chia dữ liệu riêng — sẽ quyết định ở mốc M4 và ghi nhận là khác biệt so với mã gốc.
+- COLMAP từ bản 3.12 ghi thêm `rigs.bin` và `frames.bin`. Định dạng `cameras.bin`, `images.bin`, `points3D.bin` giữ nguyên (đã đối chiếu mã nguồn COLMAP), nên bộ đọc của Inria vẫn dùng được.
 
 ## 7. Kết quả thực tế
 
