@@ -1,0 +1,4 @@
+# Chuẩn hóa xuống dòng; script shell luôn dùng LF để chạy được trên pod Linux
+# kể cả khi repo được clone trên Windows.
+* text=auto
+*.sh text eol=lf

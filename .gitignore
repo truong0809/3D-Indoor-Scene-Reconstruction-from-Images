@@ -1,0 +1,45 @@
+# --- Dữ liệu và kết quả lớn: lưu trên Runpod network volume / ổ ngoài, không đưa lên Git ---
+data/
+datasets/
+outputs/
+output/
+checkpoints/
+results/raw/
+*.ckpt
+*.pth
+*.pt
+*.ply
+*.splat
+*.ksplat
+*.spz
+*.sog
+*.mp4
+*.MP4
+*.mov
+*.MOV
+*.zip
+*.tar
+*.tar.gz
+
+# --- Môi trường và cache ---
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.cache/
+wandb/
+runs/
+
+# --- Bí mật ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# --- Hệ điều hành / IDE ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
