@@ -1,0 +1,41 @@
+{
+  "name": "train_modes_gsplat",
+  "description": "Hai chế độ huấn luyện 3DGS trên gsplat: DefaultStrategy (baseline) và MCMCStrategy. Xem docs/design/training_modes.md",
+  "trainer": {
+    "name": "gsplat examples/simple_trainer.py",
+    "repo": "https://github.com/nerfstudio-project/gsplat",
+    "commit": "6e8c837f35c9b025c0e92fb07bfda4e7c9361c49"
+  },
+  "baseline_mode": "default",
+  "default_seed": 42,
+  "protocol": {
+    "data_factor": 1,
+    "test_every": 8,
+    "max_steps": 30000,
+    "lpips_net": "vgg",
+    "antialiased": false,
+    "save_ply": true,
+    "disable_video": false,
+    "init_type": "sfm"
+  },
+  "modes": {
+    "default": {
+      "description": "3DGS, DefaultStrategy (heuristic densification của Kerbl et al. 2023) - baseline",
+      "preset": "default",
+      "args": {}
+    },
+    "mcmc": {
+      "description": "3DGS-MCMC (Kheradmand et al. 2024), MCMCStrategy; cùng protocol và cùng số Gaussian cuối với baseline trên cùng cảnh",
+      "preset": "mcmc",
+      "args": {},
+      "cap_max": {"policy": "match_baseline"}
+    },
+    "mcmc_demo": {
+      "description": "Đúng tham số huấn luyện của notebook demo của nhóm (40k vòng, cap 3.5M, refine dừng ở 35k, antialiased). Chỉ để đối chiếu với demo; khác protocol nên không vào bảng so sánh công bằng",
+      "preset": "mcmc",
+      "protocol": {"max_steps": 40000, "antialiased": true},
+      "args": {"strategy.refine_stop_iter": 35000, "opacity_reg": 0.01, "scale_reg": 0.01},
+      "cap_max": {"policy": "fixed", "value": 3500000}
+    }
+  }
+}

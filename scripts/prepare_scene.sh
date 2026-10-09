@@ -70,3 +70,5 @@ echo
 echo "DONE. Scene: $SCENE | reports: $SCENE/frames_report.json, $SCENE/sfm_report.json | log: $LOG"
 echo "Train a first model to look at (all frames, no test split):"
 echo "  cd $WS/code/gaussian-splatting && python train.py -s $SCENE -m $WS/outputs/scenes/$NAME --disable_viewer"
+echo "Or train the two gsplat modes with a held-out test split (docs/design/training_modes.md):"
+echo "  bash scripts/train_scene.sh $NAME default && bash scripts/train_scene.sh $NAME mcmc"

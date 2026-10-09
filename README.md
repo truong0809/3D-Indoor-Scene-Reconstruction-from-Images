@@ -4,7 +4,7 @@
 
 Hệ thống nhận ảnh hoặc video quay không gian nội thất bằng camera thông thường (không yêu cầu LiDAR), tái tạo cảnh 3D bằng **3D Gaussian Splatting (3DGS)**, cho phép xem và tương tác trên trình xem 3D, và đánh giá chất lượng bằng thực nghiệm.
 
-> **Trạng thái:** đã có script cài đặt, tái lập baseline và chuẩn bị dữ liệu, kiểm thử trên CPU. Chưa chạy trên GPU, chưa có mô hình hay kết quả thực nghiệm.
+> **Trạng thái:** đã có script cài đặt, tái lập baseline, chuẩn bị dữ liệu và hai chế độ huấn luyện (Default / MCMC), kiểm thử trên CPU. Chưa chạy trên GPU, chưa có mô hình hay kết quả thực nghiệm.
 > Chi tiết xem [PROJECT_STATUS.md](PROJECT_STATUS.md).
 
 ## Pipeline
@@ -13,7 +13,14 @@ Hệ thống nhận ảnh hoặc video quay không gian nội thất bằng came
 Video / ảnh → chọn frame nét → COLMAP (camera + điểm thưa) → huấn luyện 3DGS → đánh giá → xuất & nén → viewer web
 ```
 
-Phương pháp và các bước kiểm chứng: [docs/plan.md](docs/plan.md).
+Huấn luyện có hai chế độ trên gsplat, so sánh cùng điều kiện:
+
+- `default`: 3DGS với Default Strategy, làm baseline.
+- `mcmc`: 3DGS-MCMC với MCMC Strategy, tích hợp từ notebook demo của nhóm.
+
+Bản Inria chính chủ được giữ làm mốc đối chiếu số liệu.
+
+Phương pháp và các bước kiểm chứng: [docs/plan.md](docs/plan.md). Thiết kế hai chế độ: [docs/design/training_modes.md](docs/design/training_modes.md).
 
 ## Cấu trúc repository
 
@@ -22,12 +29,15 @@ Phương pháp và các bước kiểm chứng: [docs/plan.md](docs/plan.md).
 | `PROJECT_STATUS.md` | Trạng thái hiện tại, quyết định đã chốt, việc tiếp theo |
 | `docs/plan.md` | Kế hoạch tổng thể: phạm vi, mốc nghiệm thu, rủi ro |
 | `docs/environment.md` | Môi trường trên pod, phiên bản ghim, mốc đối chiếu, sự cố đã biết |
+| `docs/design/training_modes.md` | Hai chế độ huấn luyện Default / MCMC và giao thức so sánh |
 | `docs/data/capture_protocol.md` | Quy trình quay video không gian nội thất |
 | `docs/research/reading_list.md` | Danh sách tài liệu cần khảo sát |
-| `environment/` | Phiên bản ghim: `gs-inria.conf` (3DGS gốc), `gs-tools.conf` (COLMAP, ffmpeg) |
-| `configs/` | Cấu hình thực nghiệm, gồm số liệu tham chiếu và ngưỡng chấp nhận |
-| `src/indoor3d/` | Mã nguồn pipeline: `data/` (chọn frame), `sfm/` (COLMAP), `eval/` (so sánh kết quả) |
-| `scripts/` | Lệnh chạy trên pod (cài đặt, tái lập baseline, chuẩn bị cảnh) |
+| `docs/research/demo_review.md` | Kết quả kiểm tra notebook demo 3DGS-MCMC và repo SpatialScene3D |
+| `environment/` | Phiên bản ghim: `gs-inria.conf` (3DGS gốc), `gs-gsplat.*` (gsplat, file khóa phụ thuộc), `gs-tools.conf` (COLMAP, ffmpeg) |
+| `configs/` | Cấu hình thực nghiệm: số liệu tham chiếu và ngưỡng chấp nhận; protocol và các chế độ huấn luyện (`train_modes.json`) |
+| `src/indoor3d/` | Mã nguồn pipeline: `data/` (chọn frame), `sfm/` (COLMAP), `train/` (chạy gsplat theo chế độ), `eval/` (tổng hợp, so sánh kết quả) |
+| `scripts/` | Lệnh chạy trên pod (cài đặt, tái lập baseline, chuẩn bị cảnh, huấn luyện theo chế độ) |
+| `references/` | Tài liệu tham khảo không thuộc pipeline (notebook demo của nhóm) |
 | `tests/` | Kiểm thử chạy trên CPU, dùng dữ liệu tổng hợp |
 
 ## Chạy trên pod Runpod
@@ -37,12 +47,15 @@ Thứ tự lần đầu (chi tiết trong [docs/environment.md](docs/environment
 ```bash
 bash scripts/env_probe.sh                         # 1. ghi nhận môi trường (chỉ đọc)
 bash scripts/setup_3dgs_inria.sh                  # 2. cài 3DGS gốc (sau khi chốt phiên bản)
+bash scripts/setup_gsplat.sh                      #    cài gsplat cho hai chế độ Default / MCMC
 bash scripts/setup_data_tools.sh                  # 3. cài COLMAP + ffmpeg
-bash scripts/run_baseline_deepblending.sh         # 4. tái lập baseline trên Deep Blending
+bash scripts/run_baseline_deepblending.sh         # 4. tái lập baseline Inria trên Deep Blending
+bash scripts/run_modes_deepblending.sh            #    default vs mcmc trên Deep Blending, đối chiếu với Inria
 bash scripts/prepare_scene.sh <video.mp4> <cảnh>  # 5. chuẩn bị một cảnh tự quay
+bash scripts/train_scene.sh <cảnh> default        #    huấn luyện baseline, rồi: train_scene.sh <cảnh> mcmc
 ```
 
-Script cài đặt chỉ chạy khi phiên bản trong `environment/gs-inria.conf` đã được chốt từ báo cáo môi trường.
+Script cài đặt chỉ chạy khi phiên bản trong file `environment/*.conf` tương ứng đã được chốt từ báo cáo môi trường.
 
 ## Kiểm thử trên máy không có GPU
 

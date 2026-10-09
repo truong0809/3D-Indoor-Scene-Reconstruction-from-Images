@@ -2,7 +2,7 @@
 
 Định dạng đối chiếu với mã nguồn COLMAP (src/colmap/scene/reconstruction_io_binary.cc,
 kiểm tra ngày 09/10/2026). Các file rigs.bin / frames.bin của COLMAP >= 3.12 không cần
-cho việc thống kê nên không đọc.
+cho việc thống kê nên không đọc. points3D.bin có thể đọc đầy đủ và ghi lại (để lọc điểm).
 """
 
 from __future__ import annotations
@@ -130,6 +130,42 @@ def read_points3d_summary(path: Path) -> PointsSummary:
     if not errors:
         return PointsSummary(0, None, None, None)
     return PointsSummary(count, float(np.mean(errors)), float(np.median(errors)), float(np.mean(track_lengths)))
+
+
+@dataclass
+class Point3D:
+    point_id: int
+    xyz: tuple[float, float, float]
+    rgb: tuple[int, int, int]
+    error: float
+    track: np.ndarray  # (n, 2) uint32: image_id, point2D_idx
+
+
+_TRACK_DTYPE = np.dtype([("image_id", "<u4"), ("point2d_idx", "<u4")])
+
+
+def read_points3d_binary(path: Path) -> list[Point3D]:
+    points = []
+    with open(path, "rb") as handle:
+        (count,) = _read(handle, "<Q")
+        for _ in range(count):
+            point_id, x, y, z, r, g, b, error, track_length = _read(handle, "<Q3d3BdQ")
+            raw = handle.read(track_length * _TRACK_DTYPE.itemsize)
+            if len(raw) != track_length * _TRACK_DTYPE.itemsize:
+                raise ValueError("unexpected end of file while reading a point track")
+            track = np.frombuffer(raw, dtype=_TRACK_DTYPE)
+            points.append(Point3D(point_id, (x, y, z), (r, g, b), error,
+                                  np.stack([track["image_id"], track["point2d_idx"]], axis=1)))
+    return points
+
+
+def write_points3d_binary(path: Path, points: list[Point3D]) -> None:
+    with open(path, "wb") as handle:
+        handle.write(struct.pack("<Q", len(points)))
+        for point in points:
+            track = np.asarray(point.track, dtype="<u4").reshape(-1, 2)
+            handle.write(struct.pack("<Q3d3BdQ", point.point_id, *point.xyz, *point.rgb, point.error, len(track)))
+            handle.write(track.tobytes())
 
 
 def model_exists(model_dir: Path) -> bool:

@@ -113,6 +113,11 @@ Viewer được đưa vào ở dạng thô ngay từ giai đoạn 3 để phát 
 - **Tiêu chí chọn bản cài đặt:** phù hợp nội thất; code chính chủ và license cho phép; chạy được trên GPU thực tế; tương thích phiên bản đã khóa; tái lập được số liệu công bố; xuất được sang viewer; dễ mở rộng.
 - **B0 – bản chính chủ Inria:** mốc đối chiếu số liệu. Inria khuyến nghị 24 GB VRAM để huấn luyện đạt chất lượng như paper; môi trường mặc định dựa trên CUDA 11; license chỉ cho phép dùng phi thương mại cho nghiên cứu/đánh giá.
 - **B1 – 3DGS trên gsplat (Apache-2.0):** nền phát triển dễ mở rộng. Chỉ dùng thay B0 khi đã tự chứng minh số liệu tương đương trên cùng cảnh. B0 và B1 có thể cần hai môi trường riêng vì khác phiên bản PyTorch/CUDA.
+- **Cập nhật 09/10/2026 (quyết định D5):** pipeline có hai chế độ huấn luyện trên gsplat.
+  - `default` (`DefaultStrategy`) là B1, làm baseline.
+  - `mcmc` (`MCMCStrategy`, 3DGS-MCMC) được tích hợp từ notebook demo của nhóm.
+  - B0 vẫn là mốc đối chiếu cho `default` trên Deep Blending.
+  - Thiết kế và giao thức so sánh: `docs/design/training_modes.md`.
 
 ### 3.4 Hướng cải tiến ứng viên
 
@@ -124,6 +129,7 @@ Chọn sau khi phân tích thất bại của baseline ở giai đoạn 4.
 | Phơi sáng và cân bằng trắng tự động | Mô hình hóa ngoại hình theo từng ảnh giảm vệt màu | Bù affine (Inria), bilateral grid / PPISP (gsplat) | PSNR, định tính ở vùng sáng–tối |
 | Video rung, mờ | Chọn frame theo độ nét và độ phủ tốt hơn lấy mẫu đều | Lọc theo độ nét; Seiskari et al., ECCV 2024 | Tỉ lệ ảnh đăng ký SfM, PSNR, thời gian |
 | SfM thất bại ở cảnh khó | Đặc trưng học sâu hoặc mô hình feed-forward cứu được cảnh mà SIFT thất bại | ALIKED + LightGlue (COLMAP 4), VGGT | Tỉ lệ đăng ký, sai số pose, PSNR ở bước sau |
+| Heuristic densification đặt Gaussian kém hiệu quả (floater, vùng trơn) | Thay densification bằng MCMC cho chất lượng tốt hơn **ở cùng số Gaussian** (đã có trong pipeline: chế độ `mcmc`, D5) | 3DGS-MCMC (Kheradmand et al., NeurIPS 2024), `MCMCStrategy` của gsplat | PSNR/SSIM/LPIPS ở cùng số Gaussian, thời gian, VRAM, ≥ 3 seed |
 
 **Ranh giới trung thực:** repo Inria đã có sẵn depth regularization và bù phơi sáng (bản cập nhật 10/2024). Chỉ bật các tùy chọn này thì không phải đóng góp. Đóng góp hợp lệ phải là:
 
